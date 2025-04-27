@@ -1,8 +1,6 @@
-
+from flask import Flask, jsonify
 import requests
 import xml.etree.ElementTree as ET
-from flask import Flask, jsonify
-import os
 
 app = Flask(__name__)
 
@@ -13,30 +11,33 @@ def home():
     return "XML Scraper is running!"
 
 @app.route("/products")
-def get_products():
+def products():
     try:
-        response = requests.get(XML_URL, timeout=10)
+        response = requests.get(XML_URL)
         response.raise_for_status()
-        tree = ET.ElementTree(ET.fromstring(response.content))
-        root = tree.getroot()
+        
+        root = ET.fromstring(response.content)
+        products_list = []
 
-        products = []
-        for product in root.findall('product'):
-            title = product.find('name').text if product.find('name') is not None else "No Title"
-            price = product.find('price').text if product.find('price') is not None else "No Price"
-            availability = product.find('availability').text if product.find('availability') is not None else "Unknown"
-            link = product.find('deeplink').text if product.find('deeplink') is not None else "No Link"
-            products.append({
-                "title": title,
-                "price": price,
-                "availability": availability,
-                "link": link
+        for product in root.findall("product"):
+            products_list.append({
+                "product_id": product.findtext("PRODUCTID", default=""),
+                "name": product.findtext("name", default=""),
+                "description": product.findtext("description", default=""),
+                "color": product.findtext("color", default=""),
+                "size": product.findtext("size", default=""),
+                "price": product.findtext("price", default=""),
+                "regular_price": product.findtext("regular_price", default=""),
+                "availability": product.findtext("availability", default=""),
+                "image": product.findtext("image", default=""),
+                "url": product.findtext("url", default=""),
+                "category_name": product.findtext("category_name", default="")
             })
 
-        return jsonify(products)
+        return jsonify(products_list)
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)})
 
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000)
