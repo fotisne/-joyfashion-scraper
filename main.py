@@ -1,3 +1,4 @@
+
 from flask import Flask, jsonify
 import requests
 import xml.etree.ElementTree as ET
@@ -14,30 +15,20 @@ def home():
 def products():
     try:
         response = requests.get(XML_URL)
-        response.raise_for_status()
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to fetch XML"}), 500
         
         root = ET.fromstring(response.content)
-        products_list = []
+        products = []
 
-        for product in root.findall("product"):
-            products_list.append({
-                "product_id": product.findtext("PRODUCTID", default=""),
-                "name": product.findtext("name", default=""),
-                "description": product.findtext("description", default=""),
-                "color": product.findtext("color", default=""),
-                "size": product.findtext("size", default=""),
-                "price": product.findtext("price", default=""),
-                "regular_price": product.findtext("regular_price", default=""),
-                "availability": product.findtext("availability", default=""),
-                "image": product.findtext("image", default=""),
-                "url": product.findtext("url", default=""),
-                "category_name": product.findtext("category_name", default="")
-            })
-
-        return jsonify(products_list)
+        for product in root.findall(".//product"):
+            product_data = {child.tag: child.text for child in product}
+            products.append(product_data)
+        
+        return jsonify(products)
 
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
